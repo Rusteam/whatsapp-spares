@@ -1,0 +1,75 @@
+{
+  "httpMethod": "GET",
+  "headers": {
+    "Accept": "*/*",
+    "Accept-Encoding": "deflate, gzip",
+    "Host": "functions.yandexcloud.net",
+    "Uber-Trace-Id": "ec97045509ba4dc7:12c6be2e38536dfc:ec97045509ba4dc7:1",
+    "User-Agent": "facebookplatform/1.0 (+http://developers.facebook.com)",
+    "X-Forwarded-For": "173.252.83.4",
+    "X-Real-Remote-Address": "[173.252.83.4]:61860",
+    "X-Request-Id": "3c8042dd-af7c-494c-be48-4499cfde2d10",
+    "X-Trace-Id": "10f6d1cf-6e61-494c-b163-d49583c17a0e"
+  },
+  "url": "",
+  "params": {},
+  "multiValueParams": {},
+  "pathParams": {},
+  "multiValueHeaders": {
+    "Accept": [
+      "*/*"
+    ],
+    "Accept-Encoding": [
+      "deflate, gzip"
+    ],
+    "Host": [
+      "functions.yandexcloud.net"
+    ],
+    "Uber-Trace-Id": [
+      "ec97045509ba4dc7:12c6be2e38536dfc:ec97045509ba4dc7:1"
+    ],
+    "User-Agent": [
+      "facebookplatform/1.0 (+http://developers.facebook.com)"
+    ],
+    "X-Forwarded-For": [
+      "173.252.83.4"
+    ],
+    "X-Real-Remote-Address": [
+      "[173.252.83.4]:61860"
+    ],
+    "X-Request-Id": [
+      "3c8042dd-af7c-494c-be48-4499cfde2d10"
+    ],
+    "X-Trace-Id": [
+      "10f6d1cf-6e61-494c-b163-d49583c17a0e"
+    ]
+  },
+  "queryStringParameters": {
+    "hub.challenge": "73736871",
+    "hub.mode": "subscribe",
+    "hub.verify_token": "HAPPY_CODING"
+  },
+  "multiValueQueryStringParameters": {
+    "hub.challenge": [
+      "73736871"
+    ],
+    "hub.mode": [
+      "subscribe"
+    ],
+    "hub.verify_token": [
+      "HAPPY_CODING"
+    ]
+  },
+  "requestContext": {
+    "identity": {
+      "sourceIp": "173.252.83.4",
+      "userAgent": "facebookplatform/1.0 (+http://developers.facebook.com)"
+    },
+    "httpMethod": "GET",
+    "requestId": "3c8042dd-af7c-494c-be48-4499cfde2d10",
+    "requestTime": "7/Feb/2023:02:56:57 +0000",
+    "requestTimeEpoch": 1675738617
+  },
+  "body": "",
+  "isBase64Encoded": true
+}
