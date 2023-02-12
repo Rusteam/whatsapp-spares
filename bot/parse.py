@@ -4,7 +4,7 @@ import re
 from datetime import datetime as dt
 
 from bot.scheme import InputMessage, OutputMessage, Constants
-from bot.services import get_exchange_rate
+from bot.services import get_exchange_rate, get_fixparts_weight
 
 CONSTANTS = Constants()
 
@@ -100,10 +100,11 @@ def parse_input_line(message) -> InputMessage:
     return InputMessage(price=price, lead_days=lead_days, part_number=part_num, vat=vat)
 
 
-def calc_selling_price(price, ex_rate):
+def calc_selling_price(price, *, weight, ex_rate):
     direct_cost = price * (1 + CONSTANTS.vat) * ex_rate
     extra_cost = direct_cost * (CONSTANTS.profit_margin + CONSTANTS.currency_conversion_charge)
-    total_cost = direct_cost + extra_cost
+    shipping_cost = weight * CONSTANTS.shipping_rate * ex_rate * (1 + CONSTANTS.currency_conversion_charge)
+    total_cost = direct_cost + extra_cost + shipping_cost
     return total_cost
 
 
@@ -112,10 +113,17 @@ def prepare_output(message: InputMessage) -> OutputMessage:
     """
     today_str = _get_today()
     ex_rate = get_exchange_rate(message.currency, "RUB", today_str)
-    total_cost = calc_selling_price(message.price, ex_rate)
+    weight = 0
+    if message.part_number:
+        try:
+            weight = get_fixparts_weight(message.part_number)
+        except Exception as e:
+            print("Error getting part weight: ", e)
+    total_cost = calc_selling_price(message.price, weight=weight, ex_rate=ex_rate)
     return OutputMessage(price=total_cost,
                          lead_days=message.lead_days + CONSTANTS.shipping_days,
-                         part_number=message.part_number)
+                         part_number=message.part_number,
+                         weight=weight)
 
 
 def _get_today() -> str:
