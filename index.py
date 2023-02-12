@@ -1,19 +1,15 @@
 import json
+import os
 import time
 
 import requests
-import os
 
 from bot import parse
-
 
 TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
 URL = f"https://graph.facebook.com/v16.0/{PHONE_ID}/messages"
-HEADERS = {
-    "Authorization": f"Bearer {TOKEN}",
-    "Content-Type": "application/json"
-}
+HEADERS = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 
 
 def handler(event, context):
@@ -27,8 +23,8 @@ def handler(event, context):
         if mode == "subscribe" and token == "HAPPY_CODING":
             print("ok", challenge)
             return {
-                'statusCode': 200,
-                'body': challenge,
+                "statusCode": 200,
+                "body": challenge,
             }
     else:
         body = json.loads(event["body"])
@@ -49,10 +45,7 @@ def handler(event, context):
             "recipient_type": "individual",
             "to": from_phone,
             "type": "text",
-            "text": {
-                "preview_url": False,
-                "body": text
-            }
+            "text": {"preview_url": False, "body": text},
         }
 
         print(f"SENDING to {from_phone}:", text)
@@ -60,7 +53,9 @@ def handler(event, context):
         i = 0
         while i < 3:
             try:
-                resp = requests.post(URL, headers=HEADERS, json=payload, verify=False, timeout=60)
+                resp = requests.post(
+                    URL, headers=HEADERS, json=payload, verify=False, timeout=60
+                )
                 break
             except Exception as e:
                 print("ERROR in handler", e)
@@ -69,11 +64,11 @@ def handler(event, context):
                 continue
 
         return {
-            'statusCode': resp.status_code,
-            'body': resp.content.decode(),
+            "statusCode": resp.status_code,
+            "body": resp.content.decode(),
         }
 
     return {
-        'statusCode': 403,
-        'body': "mode or challenge incorrect",
+        "statusCode": 403,
+        "body": "mode or challenge incorrect",
     }

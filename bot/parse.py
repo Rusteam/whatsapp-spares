@@ -3,15 +3,14 @@
 import re
 from datetime import datetime as dt
 
-from bot.scheme import InputMessage, OutputMessage, Constants
+from bot.scheme import Constants, InputMessage, OutputMessage
 from bot.services import get_exchange_rate, get_fixparts_weight
 
 CONSTANTS = Constants()
 
 
 def _parse_part_number(message):
-    """Parse the part number from the message.
-    """
+    """Parse the part number from the message."""
     PART_NUM_PATTERN = r"(A\d+)"
     part_num_match = re.match(PART_NUM_PATTERN, message, flags=re.IGNORECASE)
     part_num = part_num_match.group(1) if part_num_match else None
@@ -22,8 +21,7 @@ def _parse_part_number(message):
 
 
 def _parse_price(message):
-    """Parse the price from the message.
-    """
+    """Parse the price from the message."""
     PRICE_PATTERN = r"(\d+)\s+(\+\s+vat)"
     price_match = re.match(PRICE_PATTERN, message, flags=re.IGNORECASE)
     if price_match:
@@ -37,8 +35,7 @@ def _parse_price(message):
 
 
 def _parse_lead_time(message):
-    """Parse the lead time from the message.
-    """
+    """Parse the lead time from the message."""
     LEAD_TIME_PATTERN = r"(\d+|\d+\-\d+) (day|week|month)s?"
     lead_time_match = re.match(LEAD_TIME_PATTERN, message, flags=re.IGNORECASE)
     if lead_time_match:
@@ -74,8 +71,7 @@ def parse_input_message(message) -> list[InputMessage]:
 
 
 def parse_input_line(message) -> InputMessage:
-    """Parse the message and return the output message.
-    """
+    """Parse the message and return the output message."""
     message = message.strip().lower()
 
     try:
@@ -102,15 +98,21 @@ def parse_input_line(message) -> InputMessage:
 
 def calc_selling_price(price, *, weight, ex_rate):
     direct_cost = price * (1 + CONSTANTS.vat) * ex_rate
-    extra_cost = direct_cost * (CONSTANTS.profit_margin + CONSTANTS.currency_conversion_charge)
-    shipping_cost = weight * CONSTANTS.shipping_rate * ex_rate * (1 + CONSTANTS.currency_conversion_charge)
+    extra_cost = direct_cost * (
+        CONSTANTS.profit_margin + CONSTANTS.currency_conversion_charge
+    )
+    shipping_cost = (
+        weight
+        * CONSTANTS.shipping_rate
+        * ex_rate
+        * (1 + CONSTANTS.currency_conversion_charge)
+    )
     total_cost = direct_cost + extra_cost + shipping_cost
     return total_cost
 
 
 def prepare_output(message: InputMessage) -> OutputMessage:
-    """Convert the message to the output format.
-    """
+    """Convert the message to the output format."""
     today_str = _get_today()
     ex_rate = get_exchange_rate(message.currency, "RUB", today_str)
     weight = 0
@@ -120,10 +122,12 @@ def prepare_output(message: InputMessage) -> OutputMessage:
         except Exception as e:
             print("Error getting part weight: ", e)
     total_cost = calc_selling_price(message.price, weight=weight, ex_rate=ex_rate)
-    return OutputMessage(price=total_cost,
-                         lead_days=message.lead_days + CONSTANTS.shipping_days,
-                         part_number=message.part_number,
-                         weight=weight)
+    return OutputMessage(
+        price=total_cost,
+        lead_days=message.lead_days + CONSTANTS.shipping_days,
+        part_number=message.part_number,
+        weight=weight,
+    )
 
 
 def _get_today() -> str:
@@ -131,13 +135,12 @@ def _get_today() -> str:
 
 
 def process_message(message: str) -> OutputMessage:
-    """Process the message and return the output message.
-    """
+    """Process the message and return the output message."""
     input_message = parse_input_message(message)
     return [prepare_output(msg) for msg in input_message]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     today = _get_today()
     rate = get_exchange_rate("AED", "RUB", today)
     print(f"{today=} {rate=:.1f} from AED to RUB")

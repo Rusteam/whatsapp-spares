@@ -1,12 +1,12 @@
 import os
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 
 class InputMessage(BaseModel):
-    """A raw message from a supplier.
-    """
+    """A raw message from a supplier."""
+
     price: float
     part_number: Optional[str] = None
     lead_days: int = 1
@@ -15,8 +15,8 @@ class InputMessage(BaseModel):
 
 
 class OutputMessage(BaseModel):
-    """A message to be sent to a customer.
-    """
+    """A message to be sent to a customer."""
+
     price: float
     lead_days: int
     part_number: Optional[str] = None
@@ -34,11 +34,13 @@ class OutputMessage(BaseModel):
 
 
 class Constants(BaseModel):
-    """Constants for the calculations.
-    """
+    """Constants for the calculations."""
+
     vat: float = float(os.getenv("AED_VAT", "0.05"))
     shipping_days: int = int(os.getenv("RU_SHIPPING_DAYS", "14"))
     profit_margin: float = float(os.getenv("PROFIT_MARGIN", "0.2"))
-    currency_conversion_charge: float = float(os.getenv("CURRENCY_CONVERSION_CHARGE", "0.1"))
+    currency_conversion_charge: float = float(
+        os.getenv("CURRENCY_CONVERSION_CHARGE", "0.1")
+    )
     back_order_lead_days: int = int(os.getenv("BACK_ORDER_LEAD_DAYS", "90"))
     shipping_rate: float = float(os.getenv("SHIPPING_RATE_AED", "40"))
