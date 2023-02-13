@@ -166,7 +166,7 @@ def test_parse_multiline(message, expected):
 
 def test_get_exchange_rate(mocker):
     mock_resp = mocker.patch(
-        "bot.services._make_request",
+        "bot.services.make_request",
         return_value={"rates": {"2021-01-01": {"RUB": 20.0}}},
     )
     rate = services.get_exchange_rate("AED", "RUB", "2021-01-01")
@@ -221,7 +221,7 @@ def test_calc_selling_price(price, ex_rate, weight, expected):
 def test_prepare_output(mocker, message, expected):
     inp = InputMessage.parse_obj(message)
     ex_rate_mock = mocker.patch("bot.parse.get_exchange_rate", return_value=20.0)
-    mocker.patch("bot.parse.get_fixparts_weight", return_value=10)
+    mocker.patch("bot.parse.get_part_weight", return_value=10)
     out = parse.prepare_output(inp)
     assert out.dict() == expected
     assert ex_rate_mock.call_count == 1
@@ -267,7 +267,7 @@ def test_prepare_output(mocker, message, expected):
 def test_process_message(mocker, message, expected):
     mocker.patch("bot.parse.get_exchange_rate", return_value=20.0)
     mocker.patch("bot.parse._get_today", return_value="2021-01-01")
-    mocker.patch("bot.parse.get_fixparts_weight", return_value=1)
+    mocker.patch("bot.parse.get_part_weight", return_value=1)
     output = parse.process_message(message)
 
     assert len(output) == len(expected)

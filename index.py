@@ -51,7 +51,7 @@ def handler(event, context):
         print(f"SENDING to {from_phone}:", text)
 
         i = 0
-        while i < 3:
+        while i < 10:
             try:
                 resp = requests.post(
                     URL, headers=HEADERS, json=payload, verify=False, timeout=60

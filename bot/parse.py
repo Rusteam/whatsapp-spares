@@ -4,7 +4,7 @@ import re
 from datetime import datetime as dt
 
 from bot.scheme import Constants, InputMessage, OutputMessage
-from bot.services import get_exchange_rate, get_fixparts_weight
+from bot.services import get_exchange_rate, get_part_weight
 
 CONSTANTS = Constants()
 
@@ -120,7 +120,7 @@ def prepare_output(message: InputMessage) -> OutputMessage:
     weight = 0
     if message.part_number:
         try:
-            weight = get_fixparts_weight(message.part_number)
+            weight = get_part_weight(message.part_number)
         except Exception as e:
             print("Error getting part weight: ", e)
     total_cost = calc_selling_price(message.price, weight=weight, ex_rate=ex_rate)

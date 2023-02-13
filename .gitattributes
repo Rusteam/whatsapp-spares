@@ -1,0 +1,7 @@
+tests/data/message.json filter=lfs diff=lfs merge=lfs -text
+tests/data/parts/A0259975047.html filter=lfs diff=lfs merge=lfs -text
+tests/data/parts/A1679063107.html filter=lfs diff=lfs merge=lfs -text
+tests/data/parts/FR3Z3079D.html filter=lfs diff=lfs merge=lfs -text
+tests/data/parts/GR3Z2C026C.html filter=lfs diff=lfs merge=lfs -text
+tests/data/status_read.json filter=lfs diff=lfs merge=lfs -text
+tests/data/verify_event.json filter=lfs diff=lfs merge=lfs -text
