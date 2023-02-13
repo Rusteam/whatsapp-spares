@@ -11,19 +11,19 @@ CONSTANTS = Constants()
 
 def _parse_part_number(message):
     """Parse the part number from the message."""
-    PART_NUM_PATTERN = r"(A\d+)"
+    PART_NUM_PATTERN = r"([A-Z][\w\d]+)"
     part_num_match = re.match(PART_NUM_PATTERN, message, flags=re.IGNORECASE)
     part_num = part_num_match.group(1) if part_num_match else None
     if part_num:
-        message = re.sub(f"{part_num}( \- )?", "", message)
+        message = re.sub(f"{part_num}( \- )?\.?", "", message)
         part_num = part_num.upper()
     return part_num, message.strip()
 
 
 def _parse_price(message):
     """Parse the price from the message."""
-    PRICE_PATTERN = r"(\d+)\s+(\+\s+vat)"
-    price_match = re.match(PRICE_PATTERN, message, flags=re.IGNORECASE)
+    PRICE_PATTERN = r"(\d+)(\s*\+\s*vat|/\-)"
+    price_match = re.match(PRICE_PATTERN, message.lstrip("-"), flags=re.IGNORECASE)
     if price_match:
         price = float(price_match.group(1))
         vat = False if "no vat" in message else True
@@ -37,7 +37,9 @@ def _parse_price(message):
 def _parse_lead_time(message):
     """Parse the lead time from the message."""
     LEAD_TIME_PATTERN = r"(\d+|\d+\-\d+) (day|week|month)s?"
-    lead_time_match = re.match(LEAD_TIME_PATTERN, message, flags=re.IGNORECASE)
+    lead_time_match = re.match(
+        LEAD_TIME_PATTERN, message.lstrip("-"), flags=re.IGNORECASE
+    )
     if lead_time_match:
         num = lead_time_match.group(1)
         if "-" in num:

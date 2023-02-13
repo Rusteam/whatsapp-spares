@@ -87,6 +87,46 @@ from bot.scheme import InputMessage
                 "currency": "AED",
             },
         ),
+        (
+            "A64646020008",
+            {
+                "part_number": "A64646020008",
+                "price": 0.0,
+                "vat": True,
+                "lead_days": 0,
+                "currency": "AED",
+            },
+        ),
+        (
+            "A375460050080--------16100+VAT-------20 DAYS",
+            {
+                "part_number": "A375460050080",
+                "price": 16100.0,
+                "vat": True,
+                "lead_days": 20,
+                "currency": "AED",
+            },
+        ),
+        (
+            "FR3Z3079D. 450/-",
+            {
+                "part_number": "FR3Z3079D",
+                "price": 450.0,
+                "vat": True,
+                "lead_days": 0,
+                "currency": "AED",
+            },
+        ),
+        (
+            "GR3Z2C026C.315/-",
+            {
+                "part_number": "GR3Z2C026C",
+                "price": 315.0,
+                "vat": True,
+                "lead_days": 0,
+                "currency": "AED",
+            },
+        ),
     ],
 )
 def test_parse_line(message, expected):
