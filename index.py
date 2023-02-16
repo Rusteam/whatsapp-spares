@@ -1,74 +1,56 @@
 import json
 import os
-import time
 
-import requests
-
-from bot import parse
+from bot import parse, wa
 
 TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
-URL = f"https://graph.facebook.com/v16.0/{PHONE_ID}/messages"
 HEADERS = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 
 
 def handler(event, context):
     print("EVENT", event)
 
-    mode = event["queryStringParameters"].get("hub.mode")
-    challenge = event["queryStringParameters"].get("hub.challenge")
-    token = event["queryStringParameters"].get("hub.verify_token")
-
-    if mode and token:
-        if mode == "subscribe" and token == "HAPPY_CODING":
-            print("ok", challenge)
-            return {
-                "statusCode": 200,
-                "body": challenge,
-            }
+    if challenge := wa.verify_whatsapp_webhook(event):
+        return {
+            "statusCode": 200,
+            "body": challenge,
+        }
     else:
         body = json.loads(event["body"])
-        changes = body["entry"][0]["changes"][0]["value"]
-        from_phone = changes["contacts"][0]["wa_id"]
 
-        try:
-            input_text = changes["messages"][0]["text"]["body"]
-            output_data = parse.process_message(input_text)
-            text = "\n\n".join([out.format() for out in output_data])
-
-        except Exception as e:
-            print("ERROR in handler", e)
-            text = f"ERROR: {e}"
-
-        payload = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": from_phone,
-            "type": "text",
-            "text": {"preview_url": False, "body": text},
-        }
-
-        print(f"SENDING to {from_phone}:", text)
-
-        i = 0
-        while i < 10:
+        msg = wa.read_text_message(body)
+        if msg:
             try:
-                resp = requests.post(
-                    URL, headers=HEADERS, json=payload, verify=False, timeout=60
-                )
-                break
+                output_data = parse.process_message(msg.text)
+                text = "\n\n".join([out.format() for out in output_data])
+
             except Exception as e:
                 print("ERROR in handler", e)
-                time.sleep(1)
-                i += 1
-                continue
+                text = f"ERROR: {e}"
+
+            print(f"SENDING to {msg.from_phone}:", text)
+
+            resp = wa.send_retry(text, msg.from_phone, HEADERS, max_retry=10)
+            if resp:
+                return {
+                    "statusCode": resp.status_code,
+                    "body": resp.content.decode(),
+                }
+            else:
+                return {
+                    "statusCode": 500,
+                    "body": "ERROR: no response from send_retry",
+                }
+        msg = wa.message_was_read(body)
+        # TODO log this
+        if msg:
+            return {
+                "statusCode": 200,
+                "body": "OK",
+            }
 
         return {
-            "statusCode": resp.status_code,
-            "body": resp.content.decode(),
+            "statusCode": 403,
+            "body": "unknown event",
         }
-
-    return {
-        "statusCode": 403,
-        "body": "mode or challenge incorrect",
-    }
