@@ -3,8 +3,11 @@
 import re
 from datetime import datetime as dt
 
+from bot.log import setup_logger
 from bot.scheme import Constants, InputMessage, OutputMessage
 from bot.services import get_exchange_rate, get_part_weight
+
+logger = setup_logger("parser")
 
 CONSTANTS = Constants()
 
@@ -79,37 +82,33 @@ def parse_input_line(message) -> InputMessage:
     try:
         part_num, message = _parse_part_number(message)
     except Exception as e:
-        print("Error parsing part number: ", e)
+        logger.error("Error parsing part number: ", exc_info=e)
         part_num = None
 
     try:
         price, vat, message = _parse_price(message)
     except Exception as e:
-        print("Error parsing price: ", e)
+        logger.error("Error parsing price: ", exc_info=e)
         price = 0
         vat = True
 
     try:
         lead_days, message = _parse_lead_time(message)
     except Exception as e:
-        print("Error parsing lead time: ", e)
+        logger.error("Error parsing lead time: ", exc_info=e)
         lead_days = 0
 
-    return InputMessage(price=price, lead_days=lead_days, part_number=part_num, vat=vat)
+    msg = InputMessage(price=price, lead_days=lead_days, part_number=part_num, vat=vat)
+    logger.debug("Parsed input line", extra=msg.dict())
+    return msg
 
 
 def calc_selling_price(price, *, weight, ex_rate):
+    ex_rate *= 1 + CONSTANTS.currency_conversion_charge
     direct_cost = price * (1 + CONSTANTS.vat) * ex_rate
-    extra_cost = direct_cost * (
-        CONSTANTS.profit_margin + CONSTANTS.currency_conversion_charge
-    )
-    shipping_cost = (
-        weight
-        * CONSTANTS.shipping_rate
-        * ex_rate
-        * (1 + CONSTANTS.currency_conversion_charge)
-    )
-    total_cost = direct_cost + extra_cost + shipping_cost
+    profit = direct_cost * CONSTANTS.profit_margin
+    shipping_cost = weight * CONSTANTS.shipping_rate * ex_rate
+    total_cost = direct_cost + profit + shipping_cost
     return total_cost
 
 
@@ -121,15 +120,18 @@ def prepare_output(message: InputMessage) -> OutputMessage:
     if message.part_number:
         try:
             weight = get_part_weight(message.part_number)
+            logger.debug(f"Got weight for {message.part_number}: {weight}")
         except Exception as e:
-            print("Error getting part weight: ", e)
+            logger.error(f"Error getting weight for {message.part_number}", exc_info=e)
     total_cost = calc_selling_price(message.price, weight=weight, ex_rate=ex_rate)
-    return OutputMessage(
+    msg = OutputMessage(
         price=total_cost,
         lead_days=message.lead_days + CONSTANTS.shipping_days,
         part_number=message.part_number,
         weight=weight,
     )
+    logger.debug("Prepared output message", extra=msg.dict())
+    return msg
 
 
 def _get_today() -> str:

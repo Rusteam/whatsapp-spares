@@ -2,16 +2,19 @@ import json
 import os
 
 from bot import parse, wa
+from bot.log import setup_logger
+
+logger = setup_logger("handler")
 
 TOKEN = os.getenv("WHATSAPP_TOKEN")
-PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
 HEADERS = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 
 
 def handler(event, context):
-    print("EVENT", event)
+    logger.info(f"EVENT: {event}")
 
     if challenge := wa.verify_whatsapp_webhook(event):
+        logger.info("webhook has been verified", extra={"challenge": challenge})
         return {
             "statusCode": 200,
             "body": challenge,
@@ -26,30 +29,38 @@ def handler(event, context):
                 text = "\n\n".join([out.format() for out in output_data])
 
             except Exception as e:
-                print("ERROR in handler", e)
+                logger.error("ERROR in handler", exc_info=e)
                 text = f"ERROR: {e}"
 
-            print(f"SENDING to {msg.from_phone}:", text)
-
             resp = wa.send_retry(text, msg.from_phone, HEADERS, max_retry=10)
-            if resp:
+            if resp is not None:
+                logger.info(
+                    f"sent message",
+                    extra={
+                        "status_code": resp.status_code,
+                        "body": text,
+                        "phone_id": msg.from_phone,
+                    },
+                )
                 return {
                     "statusCode": resp.status_code,
                     "body": resp.content.decode(),
                 }
             else:
+                logger.error("ERROR: no response from send_retry")
                 return {
                     "statusCode": 500,
                     "body": "ERROR: no response from send_retry",
                 }
         msg = wa.message_was_read(body)
-        # TODO log this
         if msg:
+            logger.info("message was read", extra=msg.dict())
             return {
                 "statusCode": 200,
                 "body": "OK",
             }
 
+        logger.error("unknown event", extra={"body": body})
         return {
             "statusCode": 403,
             "body": "unknown event",

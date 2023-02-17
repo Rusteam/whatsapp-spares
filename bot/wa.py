@@ -1,10 +1,16 @@
+import os
 import time
 from typing import Optional
 
 import requests
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
-URL = "https://graph.facebook.com/v16.0/{PHONE_ID}/messages"
+from bot.log import setup_logger
+
+logger = setup_logger("whatsapp")
+
+PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
+URL = f"https://graph.facebook.com/v16.0/{PHONE_ID}/messages"
 
 
 class TextMessage(BaseModel):
@@ -33,7 +39,10 @@ def read_text_message(event_body: dict) -> TextMessage:
     changes = event_body["entry"][0]["changes"][0]["value"]
     if "messages" in changes:
         from_phone = changes["messages"][0]["from"]
+        if from_phone.startswith("7"):
+            from_phone = "78" + from_phone[1:]
         input_text = changes["messages"][0]["text"]["body"]
+        logger.debug("received message", extra={"from": from_phone, "text": input_text})
         return TextMessage(from_phone=from_phone, text=input_text)
     else:
         return None
@@ -42,17 +51,17 @@ def read_text_message(event_body: dict) -> TextMessage:
 def message_was_read(event_body: dict) -> MessageStatus:
     changes = event_body["entry"][0]["changes"][0]["value"]
     if "statuses" in changes:
-        return MessageStatus(
+        msg = MessageStatus(
             status=changes["statuses"][0]["status"],
             recipient=changes["statuses"][0]["recipient_id"],
         )
+        return msg
     else:
         return None
 
 
 def send_retry(text, phone_id: str, headers: dict, max_retry: int = 10):
     i = 0
-    url = URL.format(PHONE_ID=phone_id)
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -63,11 +72,19 @@ def send_retry(text, phone_id: str, headers: dict, max_retry: int = 10):
     while i < max_retry:
         try:
             resp = requests.post(
-                url, headers=headers, json=payload, verify=False, timeout=60
+                URL, headers=headers, json=payload, verify=False, timeout=60
+            )
+            logger.debug(
+                "POST message",
+                extra={
+                    "status_code": resp.status_code,
+                    "body": text,
+                    "phone_id": phone_id,
+                    "content": resp.content.decode(),
+                },
             )
             return resp
         except Exception as e:
-            print("ERROR in handler", e)
+            logger.warn("error sending message", exc_info=e, extra={"retry": i})
             time.sleep(1)
             i += 1
-            continue
