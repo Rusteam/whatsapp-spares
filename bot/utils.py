@@ -1,3 +1,5 @@
+import cv2
+import numpy as np
 import requests
 
 
@@ -11,3 +13,16 @@ def make_request(url, params, json: bool = True, **kwargs) -> dict | str:
     resp = requests.get(url, params=params, headers=headers, **kwargs)
     resp.raise_for_status()
     return resp.json() if json else resp.content.decode()
+
+
+def download_image(url: str, **kwargs) -> np.ndarray:
+    """Download an image from the url."""
+    resp = requests.get(url, **kwargs)
+    resp.raise_for_status()
+    image_array = np.asarray(bytearray(resp.content), dtype="uint8")
+    return cv2.imdecode(image_array, cv2.IMREAD_COLOR)  # pylint: disable=no-member
+
+
+if __name__ == "__main__":
+    a = download_image("https://i.imgur.com/4xysyQ7.jpeg")
+    cv2.imwrite("test.jpg", a)

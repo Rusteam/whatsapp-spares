@@ -18,6 +18,11 @@ class TextMessage(BaseModel):
     text: str
 
 
+class MediaMessage(TextMessage):
+    media_id: str
+    mime_type: str
+
+
 class MessageStatus(BaseModel):
     status: str
     recipient: str
@@ -35,27 +40,74 @@ def verify_whatsapp_webhook(event: dict) -> Optional[str]:
     return None
 
 
+def _get_last_change(event_body: dict) -> dict:
+    return event_body["entry"][0]["changes"][0]["value"]
+
+
+def _get_phone_number(changes: list) -> str:
+    from_phone = changes["messages"][0]["from"]
+    if from_phone.startswith("7"):
+        from_phone = "78" + from_phone[1:]
+    return from_phone
+
+
 def read_text_message(event_body: dict) -> TextMessage:
-    changes = event_body["entry"][0]["changes"][0]["value"]
-    if "messages" in changes:
-        from_phone = changes["messages"][0]["from"]
-        if from_phone.startswith("7"):
-            from_phone = "78" + from_phone[1:]
+    changes = _get_last_change(event_body)
+    if "messages" in changes and changes["messages"][0]["type"] == "text":
+        from_phone = _get_phone_number(changes)
         input_text = changes["messages"][0]["text"]["body"]
-        logger.debug("received message", extra={"from": from_phone, "text": input_text})
+        logger.debug(f"received message: {input_text}", extra={"from": from_phone})
         return TextMessage(from_phone=from_phone, text=input_text)
     else:
         return None
 
 
 def message_was_read(event_body: dict) -> MessageStatus:
-    changes = event_body["entry"][0]["changes"][0]["value"]
+    changes = _get_last_change(event_body)
     if "statuses" in changes:
         msg = MessageStatus(
             status=changes["statuses"][0]["status"],
             recipient=changes["statuses"][0]["recipient_id"],
         )
         return msg
+    else:
+        return None
+
+
+def read_media_message(event_body: dict) -> MediaMessage:
+    changes = _get_last_change(event_body)
+    if "messages" in changes and changes["messages"][0]["type"] in ["image", "video"]:
+        phone_number = _get_phone_number(changes)
+        media_type = changes["messages"][0]["type"]
+        media_content = changes["messages"][0][media_type]
+        logger.debug(f"received media: {media_content}", extra={"from": phone_number})
+        return MediaMessage(
+            text=media_content.get("caption", ""),
+            media_id=media_content["id"],
+            mime_type=media_content["mime_type"],
+            from_phone=phone_number,
+        )
+    else:
+        return None
+
+
+def retrieve_media_url(media_id: str, headers: dict) -> str:
+    """Retrieve media url from cloud api."""
+    resp = requests.get(
+        f"https://graph.facebook.com/v16.0/{media_id}",
+        headers=headers,
+        verify=False,
+        timeout=60,
+    )
+    logger.debug(
+        "GET media url",
+        extra={
+            "status_code": resp.status_code,
+            "content": resp.content.decode(),
+        },
+    )
+    if resp.status_code == 200:
+        return resp.json()["url"]
     else:
         return None
 

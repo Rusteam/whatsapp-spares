@@ -5,3 +5,4 @@ python-json-logger==2.0.4
 numpy==1.24.3
 opencv-python-headless==4.7.0.72
 openai==0.27.8
+pytesseract==0.3.10
