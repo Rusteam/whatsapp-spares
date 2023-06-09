@@ -5,3 +5,6 @@ tests/data/parts/FR3Z3079D.html filter=lfs diff=lfs merge=lfs -text
 tests/data/parts/GR3Z2C026C.html filter=lfs diff=lfs merge=lfs -text
 tests/data/status_read.json filter=lfs diff=lfs merge=lfs -text
 tests/data/verify_event.json filter=lfs diff=lfs merge=lfs -text
+tests/data/images/european_quote_screenshot_small.jpeg filter=lfs diff=lfs merge=lfs -text
+tests/data/images/european_quote_screenshot.jpeg filter=lfs diff=lfs merge=lfs -text
+tests/data/images/european_quote_screenshot_6column.jpeg filter=lfs diff=lfs merge=lfs -text
