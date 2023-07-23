@@ -6,3 +6,8 @@ numpy==1.24.3
 opencv-python-headless==4.7.0.72
 openai==0.27.8
 pytesseract==0.3.10
+heyoo==0.0.9
+typing~=3.7.4.3
+pandas~=2.0.1
+pdfplumber~=0.9.0
+pytest~=7.2.1
