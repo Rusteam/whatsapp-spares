@@ -63,7 +63,7 @@ class PdfOrderProcessor(ABC):
 
         results = pd.concat(results)
         if self.checksum:
-            if (res := self.calculate_total(results)) - self.checksum > 1e-4:
+            if (res := round(self.calculate_total(results), 2)) - self.checksum > 1e-3:
                 raise ValueError(f"Parsing has failed: {self.checksum=} and {res=}")
         return results
 
@@ -82,7 +82,13 @@ class PdfOrderProcessor(ABC):
     def calculate_total(self, results: pd.DataFrame) -> float:
         """Multiple quantity by price and add vat."""
         total = results["quantity"] * results["price"]
-        return total.sum() * (1 + self.vat)
+        return total.sum().item() * (1 + self.vat)
+
+    @staticmethod
+    def fix_number(value: str) -> str:
+        value = re.sub(",", "", value)
+        value = re.sub("\.00$", "", value)
+        return value
 
 
 class PdfOrderEuropeanAutospares(PdfOrderProcessor):
@@ -97,12 +103,6 @@ class PdfOrderEuropeanAutospares(PdfOrderProcessor):
     @property
     def currency(self):
         return Currency.aed
-
-    @staticmethod
-    def fix_number(value: str) -> str:
-        value = re.sub(",", "", value)
-        value = re.sub("\.00$", "", value)
-        return value
 
     def _process_row(self, row: list) -> list:
         # Strip manufacturer letter and remove non-word chars
@@ -141,5 +141,76 @@ class PdfOrderEuropeanAutospares(PdfOrderProcessor):
             else:
                 i += 1
         # strip a manufacturer name
+        rows_filtered = list(map(lambda x: self._process_row(x), rows_filtered))
+        return rows_filtered
+
+
+class PdfOrderHND(PdfOrderProcessor):
+    @property
+    def supplier_name(self):
+        return "HND"
+
+    @property
+    def vat(self):
+        return 0.05
+
+    @property
+    def currency(self):
+        return Currency.aed
+
+    def _process_row(self, row: list) -> list:
+        try:
+            part_order = PartOrder(
+                part_number=row[1],
+                part_name=row[2],
+                price=self.fix_number(row[5]),
+                quantity=self.fix_number(row[4]),
+                currency=self.currency,
+                discount=row[6],
+            )
+        except pydantic.ValidationError as e:
+            print(f"{row=}")
+            raise e
+        return part_order
+
+    def parse_table(self, rows: list[Any]) -> TABLE_TYPE:
+        """Only keep meaningful rows and extract column names"""
+        rows = rows[1:]
+        rows_filtered = list(filter(lambda x: any(x), rows))
+        rows_filtered = list(map(lambda x: self._process_row(x), rows_filtered))
+        return rows_filtered
+
+
+class PdfOrderHumaidAli(PdfOrderProcessor):
+    @property
+    def supplier_name(self):
+        return "Humaid Ali Trading"
+
+    @property
+    def vat(self):
+        return 0.05
+
+    @property
+    def currency(self):
+        return Currency.aed
+
+    def _process_row(self, row: list) -> list:
+        try:
+            part_order = PartOrder(
+                part_number=row[0],
+                part_name=row[1],
+                price=self.fix_number(row[3]),
+                quantity=self.fix_number(row[2]),
+                currency=self.currency,
+            )
+        except pydantic.ValidationError as e:
+            print(f"{row=}")
+            raise e
+        return part_order
+
+    def parse_table(self, rows: list[Any]) -> TABLE_TYPE:
+        """Only keep meaningful rows and extract column names"""
+        rows = rows[2:]
+        rows_filtered = list(filter(lambda x: any(x), rows))
         rows_filtered = list(map(lambda x: self._process_row(x), rows_filtered))
         return rows_filtered
