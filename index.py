@@ -1,16 +1,21 @@
 import json
 import os
 
+import cv2
+from heyoo import WhatsApp
+
 from bot import parse, utils, wa
 from bot.log import setup_logger
 from bot.workers import ScreenshotQuoteParser
 
 logger = setup_logger("handler")
 
-HEADER_TOKEN = {"Authorization": f"Bearer {os.getenv('WHATSAPP_TOKEN')}"}
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+HEADER_TOKEN = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
 HEADER_JSON = {"Content-Type": "application/json"}
 
 img_processor = ScreenshotQuoteParser()
+messenger = WhatsApp(WHATSAPP_TOKEN)
 
 
 def _format_final_response(resp, text, phone_number: str):
@@ -50,8 +55,11 @@ def _handle_text_message(msg: wa.TextMessage) -> dict:
 
 def _handle_media_message(msg: wa.MediaMessage) -> dict:
     try:
-        media_url = wa.retrieve_media_url(msg.media_id, HEADER_TOKEN)
-        img = utils.download_image(media_url, headers=HEADER_TOKEN)
+        # media_url = wa.retrieve_media_url(msg.media_id, HEADER_TOKEN)
+        # img = utils.download_image(media_url, headers=HEADER_TOKEN)
+        media_url = messenger.query_media_url(msg.media_id)
+        img_file = messenger.download_media(media_url, msg.mime_type)
+        img = cv2.imread(img_file)[:, :, ::-1]  # pylint: disable=no-member
         res = img_processor.execute(img)
         text = "\n\n".join([str(out) for out in res])
 

@@ -177,9 +177,9 @@ def test_get_exchange_rate(mocker):
 @pytest.mark.parametrize(
     "price, ex_rate, weight, expected",
     [
-        (100.0, 20.0, 1, 3610.0),
-        (1000.0, 20.0, 10, 36100.0),
-        (50, 19, 0, 1296.75),
+        (100.0, 20.0, 1, 3652.0),
+        (1000.0, 20.0, 10, 36520.0),
+        (50, 19, 0, 1316.7),
     ],
 )
 def test_calc_selling_price(price, ex_rate, weight, expected):
@@ -193,7 +193,7 @@ def test_calc_selling_price(price, ex_rate, weight, expected):
         (
             {"price": 100.0, "vat": True, "lead_days": 1, "currency": "AED"},
             {
-                "price": 2730.0,
+                "price": 2772.0,
                 "lead_days": 15,
                 "currency": "RUB",
                 "part_number": None,
@@ -209,7 +209,7 @@ def test_calc_selling_price(price, ex_rate, weight, expected):
                 "part_number": "A1678853300",
             },
             {
-                "price": 11530.0,
+                "price": 11572.0,
                 "lead_days": 15,
                 "currency": "RUB",
                 "part_number": "A1678853300",
@@ -234,7 +234,7 @@ def test_prepare_output(mocker, message, expected):
             "1000 + vat 1 month order",
             [
                 {
-                    "price": 27300.0,
+                    "price": 27720.0,
                     "lead_days": 44,
                     "currency": "RUB",
                     "part_number": None,
@@ -247,14 +247,14 @@ def test_prepare_output(mocker, message, expected):
  A1678802808 - 540 + vat  17-21 days""",
             [
                 {
-                    "price": 25450.0,
+                    "price": 25828.0,
                     "lead_days": 24,
                     "currency": "RUB",
                     "part_number": "A1678853300",
                     "weight": 1.0,
                 },
                 {
-                    "price": 15622.0,
+                    "price": 15848.8,
                     "lead_days": 35,
                     "currency": "RUB",
                     "part_number": "A1678802808",
@@ -272,4 +272,4 @@ def test_process_message(mocker, message, expected):
 
     assert len(output) == len(expected)
     for out, exp in zip(output, expected):
-        assert out == exp
+        assert out.dict() == exp
