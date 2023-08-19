@@ -1,4 +1,4 @@
-"""OpenAI GPT api requests.
+"""Process raw text into structured quote.
 """
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from bot.log import setup_logger
 from bot.scheme.parts import PartQuote
 from bot.utils import parse
-from bot.utils.parse import process_message
 
 logger = setup_logger(__name__)
 
@@ -24,5 +23,14 @@ class TextQuoteParserRegex(TextQuoteParser):
     """Use regex to convert raw text into structured form."""
 
     def run(self, text: str) -> list[PartQuote]:
-        msg = parse.parse_input_message(text)
-        return msg
+        msg_parts = parse.parse_input_message(text)
+        res = [
+            PartQuote(
+                price=one.price,
+                part_number=one.part_number if one.part_number else "<UNK>",
+                lead_days=one.lead_days,
+                vat=one.vat,
+            )
+            for one in msg_parts
+        ]
+        return res

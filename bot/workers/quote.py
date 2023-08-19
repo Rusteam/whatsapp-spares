@@ -8,10 +8,11 @@ from dataclasses import dataclass
 from bot.scheme.parts import PartQuote
 from bot.services.gpt import TextQuoteParser, TextQuoteParserGPT
 from bot.utils import ocr
+from bot.utils.table import PandasMixin
 
 
 @dataclass
-class QuoteParser(ABC):
+class QuoteParser(ABC, PandasMixin):
     """Meta-class for different quote parsers."""
 
     src: str

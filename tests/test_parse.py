@@ -3,6 +3,12 @@ import pytest
 from bot.scheme.messages import InputMessage
 from bot.services.utils import get_exchange_rate
 from bot.utils import parse
+from bot.workers import text
+
+
+@pytest.fixture(scope="module")
+def text_parser_worker():
+    return text.TextQuoteParserRegex()
 
 
 @pytest.mark.parametrize(
@@ -130,9 +136,13 @@ from bot.utils import parse
         ),
     ],
 )
-def test_parse_line(message, expected):
+def test_parse_line(message, expected, text_parser_worker):
     parsed = parse.parse_input_line(message)
     assert parsed.dict() == expected
+
+    res = text_parser_worker.run(message)
+    assert len(res) == 1
+    assert res
 
 
 @pytest.mark.parametrize(

@@ -9,12 +9,13 @@ import pydantic
 
 from bot.scheme.enums import Currency
 from bot.scheme.parts import PartOrder
+from bot.utils.table import PandasMixin
 
 TABLE_TYPE = list[PartOrder]
 
 
 @dataclass
-class PdfOrderProcessor(ABC):
+class PdfOrderProcessor(ABC, PandasMixin):
     """
     Base class to extract data from pdf files and format into our data format.
     """
@@ -52,8 +53,7 @@ class PdfOrderProcessor(ABC):
         if not table:
             return None
         rows = self.parse_table(table)
-        df = pd.DataFrame([row.dict() for row in rows])
-        return df
+        return self.as_table(rows)
 
     def run(self):
         pdf = self._read_pdf()
@@ -64,7 +64,9 @@ class PdfOrderProcessor(ABC):
 
         results = pd.concat(results)
         if self.checksum:
-            if (res := round(self.calculate_total(results), 2)) - self.checksum > 1e-3:
+            if (
+                res := round(self.calculate_total(results, vat=self.vat), 2)
+            ) - self.checksum > 1e-3:
                 raise ValueError(f"Parsing has failed: {self.checksum=} and {res=}")
         return results
 
@@ -79,11 +81,6 @@ class PdfOrderProcessor(ABC):
         """From pdfplumbers extract_table output to a list of rows and
         a list of column names."""
         pass
-
-    def calculate_total(self, results: pd.DataFrame) -> float:
-        """Multiple quantity by price and add vat."""
-        total = results["quantity"] * results["price"]
-        return total.sum().item() * (1 + self.vat)
 
     @staticmethod
     def fix_number(value: str) -> str:
