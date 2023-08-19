@@ -1,5 +1,5 @@
-from bot import ford, mercedes
-from bot.utils import make_request
+from bot.services import ford, mercedes
+from bot.utils.io import make_request
 
 
 def get_exchange_rate(from_currency: str, to_currency: str, date_str: str) -> float:

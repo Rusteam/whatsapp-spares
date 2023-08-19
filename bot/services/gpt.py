@@ -1,16 +1,11 @@
-"""OpenAI GPT api requests.
-"""
 import ast
 import os
-from dataclasses import dataclass
 from pprint import pprint
 
 import openai
 
-from bot.log import setup_logger
-from bot.scheme import PartQuote
-
-logger = setup_logger(__name__)
+from bot.scheme.parts import PartQuote
+from bot.workers.text import TextQuoteParser, logger
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -25,8 +20,7 @@ Output: [
 """
 
 
-@dataclass
-class QuoteParserGPT:
+class TextQuoteParserGPT(TextQuoteParser):
     """Use the OpenAI GPT-3 API to parse a quotation for spare parts."""
 
     model_name: str = os.getenv("OPENAI_COMPLETION_MODEL", "text-davinci-003")
@@ -91,7 +85,7 @@ class QuoteParserGPT:
 
 
 if __name__ == "__main__":
-    quote_gpt = QuoteParserGPT()
+    quote_gpt = TextQuoteParserGPT()
     quote = """‘A099 820 88 00 REFLECTING EMITTER. 35 10 DAYS ORDER
 ‘A118 885 38.00 BASIC CARRIER, BUMPER 125, 10 DAYS ORDER"""
     pprint(quote_gpt.run(quote))

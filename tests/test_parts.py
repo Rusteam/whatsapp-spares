@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from bot import ford, mercedes
+from bot.services import ford, mercedes
 
 TEST_DATA_DIR = Path(__file__).parent / "data" / "parts"
 
@@ -15,10 +15,12 @@ TEST_DATA_DIR = Path(__file__).parent / "data" / "parts"
     ],
 )
 def test_get_mercedes_weight(mocker, part_number, expected):
-    mocker.patch("bot.mercedes._get_mercedes_entries")
-    mocker.patch("bot.mercedes._extract_mercedes_linkpath", return_value=part_number)
+    mocker.patch("bot.services.mercedes._get_mercedes_entries")
     mocker.patch(
-        "bot.mercedes._get_mercedes_product_page",
+        "bot.services.mercedes._extract_mercedes_linkpath", return_value=part_number
+    )
+    mocker.patch(
+        "bot.services.mercedes._get_mercedes_product_page",
         return_value=_read_html_page(part_number),
     )
 
@@ -35,7 +37,7 @@ def test_get_mercedes_weight(mocker, part_number, expected):
 )
 def test_get_ford_weight(mocker, part_number, expected):
     mocker.patch(
-        "bot.ford.get_product_page",
+        "bot.services.ford.get_product_page",
         return_value=_read_html_page(part_number),
     )
 

@@ -3,7 +3,7 @@ from pathlib import Path
 import pydantic
 import pytest
 
-from bot import pdf
+from bot.workers import pdf
 
 THIS_DIR = Path(__file__).parent
 

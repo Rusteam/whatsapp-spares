@@ -7,7 +7,8 @@ import pandas as pd
 import pdfplumber
 import pydantic
 
-from bot.scheme import Currency, PartOrder
+from bot.scheme.enums import Currency
+from bot.scheme.parts import PartOrder
 
 TABLE_TYPE = list[PartOrder]
 
@@ -175,13 +176,13 @@ class PdfOrderHND(PdfOrderProcessor):
 
     def parse_table(self, rows: list[Any]) -> TABLE_TYPE:
         """Only keep meaningful rows and extract column names"""
-        rows = rows[1:]
-        rows_filtered = list(filter(lambda x: any(x), rows))
+        rows_filtered = list(filter(lambda x: any(x), rows[1:]))
         rows_filtered = list(map(lambda x: self._process_row(x), rows_filtered))
         return rows_filtered
 
 
 class PdfOrderHumaidAli(PdfOrderProcessor):
+    # TODO fix failing table extraction
     @property
     def supplier_name(self):
         return "Humaid Ali Trading"

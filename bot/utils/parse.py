@@ -4,8 +4,8 @@ import re
 from datetime import datetime as dt
 
 from bot.log import setup_logger
-from bot.scheme import Constants, InputMessage, OutputMessage
-from bot.services import get_exchange_rate, get_part_weight
+from bot.scheme.messages import Constants, InputMessage, OutputMessage
+from bot.services.utils import get_exchange_rate, get_part_weight
 
 logger = setup_logger("parser")
 

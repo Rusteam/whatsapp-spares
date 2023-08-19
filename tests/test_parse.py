@@ -1,7 +1,8 @@
 import pytest
 
-from bot import parse, services
-from bot.scheme import InputMessage
+from bot.scheme.messages import InputMessage
+from bot.services.utils import get_exchange_rate
+from bot.utils import parse
 
 
 @pytest.mark.parametrize(
@@ -166,10 +167,10 @@ def test_parse_multiline(message, expected):
 
 def test_get_exchange_rate(mocker):
     mock_resp = mocker.patch(
-        "bot.services.make_request",
+        "bot.utils.io.make_request",
         return_value={"rates": {"2021-01-01": {"RUB": 20.0}}},
     )
-    rate = services.get_exchange_rate("AED", "RUB", "2021-01-01")
+    rate = get_exchange_rate("AED", "RUB", "2021-01-01")
     assert rate == 20.0
     assert mock_resp.call_count == 1
 

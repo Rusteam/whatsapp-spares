@@ -2,7 +2,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from bot.utils import make_request
+from bot.utils.io import make_request
 
 
 def _get_mercedes_entries(part_number: str) -> list[dict]:
