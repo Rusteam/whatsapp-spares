@@ -148,3 +148,18 @@ if __name__ == "__main__":
     today = _get_today()
     rate = get_exchange_rate("AED", "RUB", today)
     print(f"{today=} {rate=:.1f} from AED to RUB")
+
+
+def format_date(val: str, from_format: str, to_format="%Y-%m-%d") -> str:
+    """Convert str date format.
+
+    Args:
+        val: date string
+        from_format: input date format
+        to_format: target date format
+
+    Returns:
+        formatted date string
+    """
+    date = dt.strptime(val, from_format)
+    return date.strftime(to_format)

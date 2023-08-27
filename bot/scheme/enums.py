@@ -16,3 +16,10 @@ class PartManufacturerType(str, Enum):
 class PartCondition(str, Enum):
     new = "new"
     used = "used"
+
+
+class ShippingType(str, Enum):
+    air = "air"
+    container = "container"
+    pickup = "pickup"
+    urgent = "urgent"

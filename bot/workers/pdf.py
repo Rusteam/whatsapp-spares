@@ -9,9 +9,20 @@ import pydantic
 
 from bot.scheme.enums import Currency
 from bot.scheme.parts import PartOrder
+from bot.utils.parse import format_date
 from bot.utils.table import PandasMixin
 
 TABLE_TYPE = list[PartOrder]
+
+
+class CropConfig(pydantic.BaseModel):  # pylint: disable=no-member
+    start_after: str = pydantic.Field(..., description="Start after this text")
+    end_before: str = pydantic.Field(..., description="End before this text")
+
+
+class ColumnConfig(pydantic.BaseModel):  # pylint: disable=no-member
+    name: str = pydantic.Field(..., description="Text value that defines a column")
+    side: str = pydantic.Field("x0", description="Attribute that described the border")
 
 
 @dataclass
@@ -22,6 +33,22 @@ class PdfOrderProcessor(ABC, PandasMixin):
 
     file: str
     checksum: Optional[float] = None
+
+    @property
+    def table_settings(self) -> dict:
+        return {
+            "vertical_strategy": "lines",
+            "horizontal_strategy": "text",
+            "min_words_horizontal": 2,
+        }
+
+    @property
+    def crop_settings(self) -> CropConfig:
+        return None
+
+    @property
+    def column_names(self) -> list[ColumnConfig]:
+        return []
 
     @property
     @abstractmethod
@@ -43,17 +70,18 @@ class PdfOrderProcessor(ABC, PandasMixin):
         return pdf
 
     def _process_page_table(self, page) -> pd.DataFrame | None:
+        page = self.crop_page(page)
         table = page.extract_table(
-            table_settings={
-                "vertical_strategy": "lines",
-                "horizontal_strategy": "text",
-                "min_words_horizontal": 2,
-            }
+            table_settings=self.update_table_settings(page, self.table_settings),
         )
         if not table:
             return None
         rows = self.parse_table(table)
         return self.as_table(rows)
+
+    @abstractmethod
+    def extract_invoice_data(self, pdf: pdfplumber.PDF) -> str:
+        pass
 
     def run(self):
         pdf = self._read_pdf()
@@ -68,7 +96,39 @@ class PdfOrderProcessor(ABC, PandasMixin):
                 res := round(self.calculate_total(results, vat=self.vat), 2)
             ) - self.checksum > 1e-3:
                 raise ValueError(f"Parsing has failed: {self.checksum=} and {res=}")
+
+        results["invoice_date"] = self.extract_invoice_data(pdf)
+        results["supplier_name"] = self.supplier_name
+        results["amount"] = results["price"] * results["quantity"] * (1 + self.vat)
         return results
+
+    def crop_page(self, page):
+        """Crops a page if crop_settings are defined."""
+        if self.crop_settings:
+            start, *_ = page.search(self.crop_settings.start_after)
+            end, *_ = page.search(self.crop_settings.end_before)
+            crop = page.crop(
+                [0, start["bottom"] + 1, page.width, end["top"] - 1], strict=False
+            )
+            return crop
+        else:
+            return page
+
+    def update_table_settings(
+        self, page: pdfplumber.pdf.Page, table_settings: dict
+    ) -> dict:
+        """If table column names are provided, then define columns based on test search"""
+        if not self.column_names:
+            return table_settings
+        else:
+            vert_lines = []
+            for col in self.column_names:
+                res, *_ = page.search(col.name)
+                vert_lines.append(res[col.side])
+            table_settings.update(
+                dict(vertical_strategy="explicit", explicit_vertical_lines=vert_lines)
+            )
+            return table_settings
 
     @staticmethod
     def concat_rows(prev_row: list, new_row: list) -> None:
@@ -142,8 +202,43 @@ class PdfOrderEuropeanAutospares(PdfOrderProcessor):
         rows_filtered = list(map(lambda x: self._process_row(x), rows_filtered))
         return rows_filtered
 
+    def extract_invoice_data(self, pdf: pdfplumber.PDF) -> str:
+        page = pdf.pages[0]
+        tables = page.extract_tables()
+        [key], [val] = tables[2]
+        if key == "Invoice Date":
+            return format_date(val, from_format="%m/%d/%Y")
+        else:
+            raise ValueError(f"Table contains {key}={val} in place of invoice date.")
+
 
 class PdfOrderHND(PdfOrderProcessor):
+    @property
+    def table_settings(self):
+        return dict(
+            horizontal_strategy="lines",
+            vertical_strategy="text",
+        )
+
+    @property
+    def crop_settings(self):
+        return CropConfig(start_after="Delivery Date", end_before="Order Subtotal")
+
+    @property
+    def column_names(self) -> list[str]:
+        return [
+            ColumnConfig(name="Sr. No."),
+            ColumnConfig(name="Item Code"),
+            ColumnConfig(name="Description"),
+            ColumnConfig(name="Quantity"),
+            ColumnConfig(name="UoM"),
+            ColumnConfig(name="Loc"),
+            ColumnConfig(name="Loc", side="x1"),
+            ColumnConfig(name="Price", side="x1"),
+            ColumnConfig(name="Tax 5%", side="x1"),
+            ColumnConfig(name="Total", side="x1"),
+        ]
+
     @property
     def supplier_name(self):
         return "HND"
@@ -161,10 +256,10 @@ class PdfOrderHND(PdfOrderProcessor):
             part_order = PartOrder(
                 part_number=row[1],
                 part_name=row[2],
-                price=self.fix_number(row[5]),
-                quantity=self.fix_number(row[4]),
+                price=self.fix_number(row[6]),
+                quantity=self.fix_number(row[3]),
                 currency=self.currency,
-                discount=row[6],
+                discount=0,
             )
         except pydantic.ValidationError as e:
             print(f"{row=}")
@@ -177,9 +272,17 @@ class PdfOrderHND(PdfOrderProcessor):
         rows_filtered = list(map(lambda x: self._process_row(x), rows_filtered))
         return rows_filtered
 
+    def extract_invoice_data(self, pdf: pdfplumber.PDF) -> str:
+        page = pdf.pages[0]
+        match, *_ = page.search("Document Date")
+        crop = page.crop(
+            [match["x0"], match["bottom"] + 1, match["x1"], match["bottom"] + 10]
+        )
+        date = crop.extract_text_simple()
+        return format_date(date, "%d/%m/%y")
+
 
 class PdfOrderHumaidAli(PdfOrderProcessor):
-    # TODO fix failing table extraction
     @property
     def supplier_name(self):
         return "Humaid Ali Trading"
@@ -212,3 +315,12 @@ class PdfOrderHumaidAli(PdfOrderProcessor):
         rows_filtered = list(filter(lambda x: any(x), rows))
         rows_filtered = list(map(lambda x: self._process_row(x), rows_filtered))
         return rows_filtered
+
+    def extract_invoice_data(self, pdf: pdfplumber.PDF) -> str:
+        page = pdf.pages[0]
+        text = page.extract_text_simple()
+        match = re.search("DATE : (\d{2}/\d{2}/\d{4})", text, re.I)
+        if match:
+            return format_date(match.group(1), "%d/%m/%Y")
+        else:
+            raise ValueError(f"Date not found in:\n\n{text}")

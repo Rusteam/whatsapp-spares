@@ -1,6 +1,9 @@
+import logging
+
 import pydantic
 
 from bot.scheme.enums import Currency, PartCondition, PartManufacturerType
+from bot.services.utils import get_part_weight
 
 # pylint: disable=no-member
 
@@ -33,6 +36,12 @@ class PartBase(pydantic.BaseModel):
     @pydantic.validator("part_name")
     def capitalize(cls, v):
         return v.lower().capitalize()
+
+    def fetch_weight(self):
+        try:
+            self.weight = get_part_weight(self.part_number)
+        except NotImplementedError as e:
+            logging.error(f"Unable to fetch weight for {self.part_number=}", exc_info=e)
 
 
 class PartQuote(PartBase):
