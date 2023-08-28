@@ -1,4 +1,5 @@
 import ast
+import json
 import os
 from pprint import pprint
 
@@ -13,9 +14,13 @@ EXAMPLE = """
 Input:
 A118 885 38.00 BASIC CARRIER, BUMPER 125, 10 DAYS ORDER
 A166 460 60.00/80. STEERING GEAR 9481 BACK ORDER
+5QF919087R - 1176+VAT  3-4 days order
+A 654 010 65 05 - 336+vat  5-6 week order
 Output: [
 {"part_number": "A118 885 38.00", "part_name": "BASIC CARRIER, BUMPER", "price": 125.0, "lead_time_days": 10},
 {"part_number": "A166 460 60.00/80", "part_name": "STEERING GEAR", "price": 9481.0, "lead_time_days": -1},
+{"part_number": "5QF919087R", "price": 1176.0, "lead_time_days": 4, "vat": true}
+{"part_number": "A6540106505", "price": 336.0, "lead_time_days": 42, "vat": true}
 ]
 """
 
@@ -76,16 +81,19 @@ class TextQuoteParserGPT(TextQuoteParser):
     @staticmethod
     def _parse_response(resp_text):
         try:
-            data = ast.literal_eval(resp_text)
+            data = json.loads(resp_text)
         except Exception as e:
             logger.error(f"Failed to parse response: {resp_text}, {e}")
             return []
+        if isinstance(data, dict):
+            data = [data]
         data = [PartQuote.parse_obj(d) for d in data]
         return data
 
 
 if __name__ == "__main__":
     quote_gpt = TextQuoteParserGPT()
-    quote = """‘A099 820 88 00 REFLECTING EMITTER. 35 10 DAYS ORDER
-‘A118 885 38.00 BASIC CARRIER, BUMPER 125, 10 DAYS ORDER"""
+    # quote = """‘A099 820 88 00 REFLECTING EMITTER. 35 10 DAYS ORDER
+    # ‘A118 885 38.00 BASIC CARRIER, BUMPER 125, 10 DAYS ORDER"""
+    quote = """5QF919087R - 1176+VAT  3-4 days order"""
     pprint(quote_gpt.run(quote))

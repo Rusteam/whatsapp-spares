@@ -39,3 +39,10 @@ class QuoteParserText(QuoteParser):
 class QuoteParserScreenshot(QuoteParser):
     def load_text(self):
         return ocr.run_ocr(self.src)
+
+
+if __name__ == "__main__":
+    path = "../../tests/data/quotes/european_quote_screenshot.jpeg"
+    parser = QuoteParserScreenshot(src=path, text_parser=TextQuoteParserGPT())
+    res = parser.run()
+    print(parser.as_table(res))

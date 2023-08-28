@@ -25,9 +25,9 @@ def load_image_gray(image_path: str) -> np.ndarray:
     return img
 
 
-def run_ocr(image_path: str) -> str:
-    """Load an image and run pytesseract on it."""
-    img = load_image_gray(image_path)
+def run_ocr(image_src: str | np.ndarray) -> str:
+    """Load an image from file or from numpy array and run pytesseract on it."""
+    img = load_image_gray(image_src) if isinstance(image_src, str) else image_src
     extracted = extract_image_text(img)
     return extracted
 

@@ -17,16 +17,6 @@ class PartBase(pydantic.BaseModel):
     quantity: int = pydantic.Field(1, description="How many items.")
     currency: str = pydantic.Field(Currency.aed, description="3-letter curency code.")
     price: float = pydantic.Field(0.0, description="Price in the original currency.")
-    weight: float = pydantic.Field(-1, description="Part weight in kilograms.")
-    manufacturer: str = pydantic.Field(
-        None, description="The original producer of the part."
-    )
-    manufacturer_type: PartManufacturerType = pydantic.Field(
-        None, description="Part manufacturer and condition"
-    )
-    condition: PartCondition = pydantic.Field(
-        PartCondition.new, description="Whether new or used."
-    )
 
     # pylint: disable=no-self-argument
     @pydantic.validator("part_number")
@@ -42,6 +32,19 @@ class PartBase(pydantic.BaseModel):
             self.weight = get_part_weight(self.part_number)
         except NotImplementedError as e:
             logging.error(f"Unable to fetch weight for {self.part_number=}", exc_info=e)
+
+
+class PartBaseExtended(PartBase):
+    weight: float = pydantic.Field(-1, description="Part weight in kilograms.")
+    manufacturer: str = pydantic.Field(
+        None, description="The original producer of the part."
+    )
+    manufacturer_type: PartManufacturerType = pydantic.Field(
+        None, description="Part manufacturer and condition"
+    )
+    condition: PartCondition = pydantic.Field(
+        PartCondition.new, description="Whether new or used."
+    )
 
 
 class PartQuote(PartBase):
