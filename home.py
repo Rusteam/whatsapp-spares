@@ -1,12 +1,10 @@
-import tempfile
-
 import cv2
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 from bot.services.gpt import TextQuoteParserGPT
-from bot.workers import pdf, quote, text
+from bot.workers import pdf, quote
 
 st.title("DExpress: автоматизация")
 
@@ -28,16 +26,18 @@ with tab_quote:
     default_columns = ["part_number", "price", "lead_time_days"]
 
     if quote_text:
-        parser_text = quote.QuoteParserText(
-            src=quote_text, text_parser=TextQuoteParserGPT()
-        )
-        out = parser_text.run()
-        if out:
-            _render_dataframe(
-                parser_text.as_table(out), default_columns=default_columns
+        with st.spinner():
+            # TODO cache results
+            parser_text = quote.QuoteParserText(
+                src=quote_text, text_parser=TextQuoteParserGPT()
             )
-        else:
-            st.error("Не удалось распознать текст")
+            out = parser_text.run(weight=True)
+            if out:
+                _render_dataframe(
+                    parser_text.as_table(out), default_columns=default_columns
+                )
+            else:
+                st.error("Не удалось распознать текст")
 
     elif quote_screenshot:
         a = np.frombuffer(

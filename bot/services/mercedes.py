@@ -65,5 +65,5 @@ def get_mercedes_weight(part_number: str) -> float:
 
 
 if __name__ == "__main__":
-    w = get_mercedes_weight("A0259975047")
+    w = get_mercedes_weight("A1679063107")
     print(f"Weight: {w}")

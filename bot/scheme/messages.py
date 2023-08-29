@@ -41,10 +41,14 @@ class Constants(pydantic.BaseModel):
     """Constants for the calculations."""
 
     vat: float = float(os.getenv("AED_VAT", "0.05"))
-    shipping_days: int = int(os.getenv("RU_SHIPPING_DAYS", "14"))
     profit_margin: float = float(os.getenv("PROFIT_MARGIN", "0.2"))
     currency_conversion_charge: float = float(
         os.getenv("CURRENCY_CONVERSION_CHARGE", "0.1")
     )
     back_order_lead_days: int = int(os.getenv("BACK_ORDER_LEAD_DAYS", "90"))
     shipping_rate: float = float(os.getenv("SHIPPING_RATE_AED", "40"))
+    shipping_days: int = int(os.getenv("RU_SHIPPING_DAYS", "14"))
+    shipping_rate_container: float = float(
+        os.getenv("SHIPPING_RATE_AED_CONTAINER", "14.68")
+    )
+    shipping_default_cost: float = float(os.getenv("SHIPPING_DEFAULT_COST", "0.25"))
