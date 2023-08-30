@@ -5,8 +5,6 @@ A quote can be a text, a screenshot or an excel file.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from bot.scheme.enums import ShippingType
-from bot.scheme.messages import Constants
 from bot.scheme.parts import PartQuote, PartQuoteExtended
 from bot.services.gpt import TextQuoteParser, TextQuoteParserGPT
 from bot.utils import ocr
@@ -31,6 +29,7 @@ class QuoteParser(ABC, PandasMixin):
     def run(self, weight: bool = False):
         text = self.load_text()
         parts = self.parse_text(text)
+        print(parts)
         parts = [PartQuoteExtended.parse_obj(part) for part in parts]
         if weight:
             _ = [self.add_weight(part) for part in parts]

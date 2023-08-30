@@ -93,7 +93,7 @@ class PdfOrderProcessor(ABC, PandasMixin):
         results = pd.concat(results)
         if self.checksum:
             if (
-                res := round(self.calculate_total(results, vat=self.vat), 2)
+                res := round(self.calculate_unit_total(results, vat=self.vat), 2)
             ) - self.checksum > 1e-3:
                 raise ValueError(f"Parsing has failed: {self.checksum=} and {res=}")
 

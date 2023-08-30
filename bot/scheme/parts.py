@@ -4,7 +4,6 @@ import pydantic
 
 from bot import CONSTANTS
 from bot.scheme.enums import Currency, PartCondition, PartManufacturerType
-from bot.scheme.messages import Constants
 from bot.services.utils import get_part_weight
 
 # pylint: disable=no-member

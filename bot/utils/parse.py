@@ -6,7 +6,7 @@ from datetime import datetime as dt
 from bot import CONSTANTS
 from bot.log import setup_logger
 from bot.scheme.messages import InputMessage, OutputMessage
-from bot.services.utils import get_exchange_rate, get_part_weight
+from bot.services.utils import get_exchange_rate, get_part_weight, get_today
 
 logger = setup_logger("parser")
 
@@ -113,7 +113,7 @@ def calc_selling_price(price, *, weight, ex_rate):
 
 def prepare_output(message: InputMessage) -> OutputMessage:
     """Convert the message to the output format."""
-    today_str = _get_today()
+    today_str = get_today()
     ex_rate = get_exchange_rate(message.currency, "RUB", today_str)
     weight = 0
     if message.part_number:
@@ -133,20 +133,10 @@ def prepare_output(message: InputMessage) -> OutputMessage:
     return msg
 
 
-def _get_today() -> str:
-    return dt.today().strftime("%Y-%m-%d")
-
-
 def process_message(message: str) -> OutputMessage:
     """Process the message and return the output message."""
     input_message = parse_input_message(message)
     return [prepare_output(msg) for msg in input_message]
-
-
-if __name__ == "__main__":
-    today = _get_today()
-    rate = get_exchange_rate("AED", "RUB", today)
-    print(f"{today=} {rate=:.1f} from AED to RUB")
 
 
 def format_date(val: str, from_format: str, to_format="%Y-%m-%d") -> str:

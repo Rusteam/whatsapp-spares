@@ -43,7 +43,7 @@ class Constants(pydantic.BaseModel):
     vat: float = float(os.getenv("AED_VAT", "0.05"))
     profit_margin: float = float(os.getenv("PROFIT_MARGIN", "0.2"))
     currency_conversion_charge: float = float(
-        os.getenv("CURRENCY_CONVERSION_CHARGE", "0.1")
+        os.getenv("CURRENCY_CONVERSION_CHARGE", "0.04")
     )
     back_order_lead_days: int = int(os.getenv("BACK_ORDER_LEAD_DAYS", "90"))
     shipping_rate: float = float(os.getenv("SHIPPING_RATE_AED", "40"))

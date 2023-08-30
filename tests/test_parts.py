@@ -2,8 +2,10 @@ from pathlib import Path
 
 import pytest
 
+from bot.scheme.enums import ShippingType
 from bot.scheme.parts import PartQuoteExtended
 from bot.services import ford, mercedes
+from bot.utils.table import PandasMixin
 
 TEST_DATA_DIR = Path(__file__).parent / "data" / "parts"
 
@@ -61,6 +63,21 @@ def test_shipping_calculation(
 
     assert part.shipping_air == expected_air
     assert part.shipping_container == expected_container
+
+
+def test_total_cost_calculation():
+    parts = [
+        PartQuoteExtended(part_number="A123", price=100, weight=1.0),
+        PartQuoteExtended(part_number="A023", price=100, weight=0.0),
+        PartQuoteExtended(part_number="A034", price=10, weight=-1.0),
+    ]
+    _ = [part.calculate_shipping_cost() for part in parts]
+    mixin = PandasMixin()
+    df = mixin.as_table(parts)
+    total = mixin.calculate_unit_total(df, shipping="shipping_air")
+    assert total.sum() == 277.5
+    total = mixin.calculate_unit_total(df, shipping="shipping_container")
+    assert total.sum() == 234.7725
 
 
 def _read_html_page(part_number: str) -> str:
