@@ -14,7 +14,7 @@ class PandasMixin:
     @staticmethod
     def calculate_unit_total(
         results: pd.DataFrame, vat: float = 0.0, shipping: Optional[str] = None
-    ) -> float:
+    ) -> pd.Series:
         """Multiple quantity by price and add vat."""
         total = results["quantity"] * results["price"]
         direct_cost = total * (1 + vat)

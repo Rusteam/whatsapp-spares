@@ -80,7 +80,7 @@ class PdfOrderProcessor(ABC, PandasMixin):
         return self.as_table(rows)
 
     @abstractmethod
-    def extract_invoice_data(self, pdf: pdfplumber.PDF) -> str:
+    def extract_invoice_date(self, pdf: pdfplumber.PDF) -> str:
         pass
 
     def run(self):
@@ -93,11 +93,11 @@ class PdfOrderProcessor(ABC, PandasMixin):
         results = pd.concat(results)
         if self.checksum:
             if (
-                res := round(self.calculate_unit_total(results, vat=self.vat), 2)
+                res := round(self.calculate_unit_total(results, vat=self.vat).sum(), 2)
             ) - self.checksum > 1e-3:
                 raise ValueError(f"Parsing has failed: {self.checksum=} and {res=}")
 
-        results["invoice_date"] = self.extract_invoice_data(pdf)
+        results["invoice_date"] = self.extract_invoice_date(pdf)
         results["supplier_name"] = self.supplier_name
         results["amount"] = results["price"] * results["quantity"] * (1 + self.vat)
         return results
@@ -202,7 +202,7 @@ class PdfOrderEuropeanAutospares(PdfOrderProcessor):
         rows_filtered = list(map(lambda x: self._process_row(x), rows_filtered))
         return rows_filtered
 
-    def extract_invoice_data(self, pdf: pdfplumber.PDF) -> str:
+    def extract_invoice_date(self, pdf: pdfplumber.PDF) -> str:
         page = pdf.pages[0]
         tables = page.extract_tables()
         [key], [val] = tables[2]
@@ -272,7 +272,7 @@ class PdfOrderHND(PdfOrderProcessor):
         rows_filtered = list(map(lambda x: self._process_row(x), rows_filtered))
         return rows_filtered
 
-    def extract_invoice_data(self, pdf: pdfplumber.PDF) -> str:
+    def extract_invoice_date(self, pdf: pdfplumber.PDF) -> str:
         page = pdf.pages[0]
         match, *_ = page.search("Document Date")
         crop = page.crop(
@@ -316,7 +316,7 @@ class PdfOrderHumaidAli(PdfOrderProcessor):
         rows_filtered = list(map(lambda x: self._process_row(x), rows_filtered))
         return rows_filtered
 
-    def extract_invoice_data(self, pdf: pdfplumber.PDF) -> str:
+    def extract_invoice_date(self, pdf: pdfplumber.PDF) -> str:
         page = pdf.pages[0]
         text = page.extract_text_simple()
         match = re.search("DATE : (\d{2}/\d{2}/\d{4})", text, re.I)
