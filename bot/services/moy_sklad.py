@@ -31,11 +31,8 @@ class MoySkladSDK(BaseModel):
     moy_sklad: MoySklad = None
     methods: ApiUrlRegistry = None
     client: MoySkladHttpClient = None
-    org_name: str = None
-    counterparty_name: str = None
-    currency_name: str = None
-    store_name: str = None
     meta: dict = {}
+    names: dict = {}
 
     class Config:
         arbitrary_types_allowed = True
@@ -47,19 +44,28 @@ class MoySkladSDK(BaseModel):
         self.methods = self.moy_sklad.get_methods()
         self.client = self.moy_sklad.get_client()
 
+    @staticmethod
+    def _find_name_key(keys: list[str]) -> str | None:
+        for key in keys:
+            if "name" in key.lower():
+                return key
+
     def _get_meta(self, entity: str, name: Optional[str] = None) -> dict:
         if entity in self.meta:
             return self.meta[entity]
 
         entities = self._list_entities(entity)
-        names = [one.get("name") for one in entities.rows]
+        names = [
+            one.get("name", one[self._find_name_key(list(one.keys()))])
+            for one in entities.rows
+        ]
         if name:
             org_meta = [
                 org.get("meta") for org in entities.rows if org.get("name") == name
             ]
             if len(org_meta) != 1:
                 raise ValueError(
-                    f"Найдено {len(org_meta)} сущностей с именем {name!r}: {org_meta}"
+                    f"Найдено {len(org_meta)} сущностей {entity!r} с именем {name!r}: {org_meta}"
                 )
             else:
                 org_meta = org_meta[0]
@@ -68,7 +74,8 @@ class MoySkladSDK(BaseModel):
             print_txt = "\n".join([f"{i + 1}. {name}" for i, name in enumerate(names)])
             selected_org = int(
                 input(
-                    f"Доступные сущности:\n{print_txt}\nВыберите сущность (введите порядковый номер): "
+                    f"Доступные сущности {entity!r}:\n{print_txt}\n"
+                    "Выберите сущность (введите порядковый номер): "
                 )
             )
             if selected_org < 1 or selected_org > len(entities.rows):
@@ -102,7 +109,7 @@ class MoySkladSDK(BaseModel):
                     resp = self._update_entity(
                         "product", entity_id=product_id, data=payload
                     )
-                    print(f"Обновлена сущность {part.part_number!r}")
+                    print(f"Обновлен товар {part.part_number!r}")
                     meta = resp.meta
                     break
         else:
@@ -112,30 +119,56 @@ class MoySkladSDK(BaseModel):
 
         return meta
 
-    @property
-    def organization(self):
-        return self._get_meta("organization", self.org_name)
+    def __getattr__(self, item):
+        """Получить метаданные сущности"""
+        if item in [
+            "organization",
+            "counterparty",
+            "currency",
+            "store",
+            "expenseitem",
+            "organization/accounts",
+        ]:
+            return self._get_meta(item, name=self.names.get(item))
+        else:
+            return getattr(self, item)
 
-    @property
-    def counterparty(self):
-        return self._get_meta("counterparty", self.counterparty_name)
-
-    @property
-    def currency(self):
-        return self._get_meta("currency", self.currency_name)
-
-    @property
-    def store(self):
-        return self._get_meta("store", self.store_name)
+    def _list_entities(
+        self, entity: str, search: Optional[str] = None
+    ) -> list[ApiResponse]:
+        if "/" in entity:
+            parent, child = entity.split("/", maxsplit=1)
+            parent_id = getattr(self, parent)["href"].split("/")[-1]
+            endpoint_url = self.methods.get_relation_list_url(
+                entity_name=parent, entity_id=parent_id, relation_entity_name=child
+            )
+        else:
+            endpoint_url = self.methods.get_list_url(entity)
+        return self.client.get(
+            endpoint_url,
+            query=Query(Search(search)) if search else None,
+        )
 
     def create_supply(
         self,
         products: list[PartOrder],
+        invoice_date: str = None,
         vat_enabled: bool = False,
         vat_included: bool = False,
-        invoice_date: str = None,
         vat_rate: float = 0.0,
     ) -> ApiResponse:
+        """Создать приемку из списка товаров
+
+        Args:
+            products: список товаров
+            invoice_date: дата приемки в формате YYYY-MM-DD
+            vat_enabled: с НДС или без
+            vat_included: если с НДС, включен ли НДС в цену
+            vat_rate: если с НДС, ставка НДС в долях от единицы
+
+        Returns:
+            Ответ сервера.
+        """
         items_meta = [self._create_product(p) for p in products]
         payload = dict(
             vatEnabled=vat_enabled,
@@ -153,14 +186,6 @@ class MoySkladSDK(BaseModel):
         resp = self._create_entity("supply", data=payload)
         print(f"Создана приемка {resp.data['name']} от {resp.data['moment']}")
         return resp
-
-    def _list_entities(
-        self, entity: str, search: Optional[str] = None
-    ) -> list[ApiResponse]:
-        return self.client.get(
-            self.methods.get_list_url(entity),
-            query=Query(Search(search)) if search else None,
-        )
 
     def _create_entity(self, entity: str, data: dict):
         return self.client.post(self.methods.get_list_url(entity), data=data)
@@ -184,6 +209,23 @@ class MoySkladSDK(BaseModel):
         else:
             return dt.strftime(dt.now(), "%Y-%m-%d %H:%M:%S")
 
+    def create_paymentout(self, total: float, vat_rate: float = 0.0) -> ApiResponse:
+        payload = dict(
+            organization=dict(meta=self.organization),
+            organizationAccount=dict(meta=getattr(self, "organization/accounts")),
+            agent=dict(meta=self.counterparty),
+            expenseItem=dict(meta=self.expenseitem),
+            moment=self._format_date(None),
+            rate=dict(currency=dict(meta=self.currency)),
+            sum=int(total * 100),
+            vatSum=int(total * vat_rate * 100),
+        )
+        self._create_entity("paymentout", data=payload)
+        print(
+            f"Создан исходящий платеж {payload['sum'] / 100} {self.names['currency'].value}"
+            f" в пользу {self.names['counterparty'].value}"
+        )
+
 
 if __name__ == "__main__":
     from bot.workers import pdf
@@ -194,10 +236,12 @@ if __name__ == "__main__":
     order_items = order.run()
 
     sklad = MoySkladSDK(
-        org_name="Test-dexpress",
-        counterparty_name=order.supplier_name,
-        currency_name=order.currency,
-        store_name="Al Fada Dubai",
+        names=dict(
+            organization=None,
+            counterparty=order.supplier_name,
+            currency=order.currency,
+            store="Al Fada Dubai",
+        )
     )
     sklad.init()
     parts = [PartOrder(**item) for item in order_items.to_dict(orient="records")]
@@ -208,3 +252,4 @@ if __name__ == "__main__":
         vat_included=False,
         vat_enabled=True,
     )
+    sklad.create_paymentout(total=order_items["amount"].sum(), vat_rate=order.vat)
